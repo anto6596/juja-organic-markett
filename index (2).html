@@ -1,0 +1,295 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Buy fresh, locally sourced organic food in Juja, Kenya. Shop organic fruits, vegetables, grains, and more with home delivery.">
+  <meta name="keywords" content="organic food Juja, buy organic produce Juja, organic groceries Kenya">
+  <title>Juja Organic Market</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/babel-standalone@6.26.0/babel.min.js"></script>
+</head>
+<body class="bg-green-50 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    // Sample product data
+    const products = [
+      { id: 1, name: "Organic Avocados", price: 100, category: "Fruits", image: "https://via.placeholder.com/150?text=Avocados" },
+      { id: 2, name: "Organic Kale", price: 50, category: "Vegetables", image: "https://via.placeholder.com/150?text=Kale" },
+      { id: 3, name: "Organic Millet", price: 200, category: "Grains", image: "https://via.placeholder.com/150?text=Millet" },
+      { id: 4, name: "Organic Honey", price: 300, category: "Others", image: "https://via.placeholder.com/150?text=Honey" },
+    ];
+
+    // Main App Component
+    function App() {
+      const [cart, setCart] = useState([]);
+      const [filter, setFilter] = useState("All");
+      const [showCheckout, setShowCheckout] = useState(false);
+      const [customerDetails, setCustomerDetails] = useState({
+        name: "",
+        address: "",
+        phone: "",
+      });
+
+      // Add to cart function
+      const addToCart = (product) => {
+        setCart([...cart, product]);
+      };
+
+      // Handle input changes for checkout form
+      const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setCustomerDetails({ ...customerDetails, [name]: value });
+      };
+
+      // Calculate total price
+      const totalPrice = cart.reduce((sum, item) => sum + item.price, 0);
+
+      // Handle checkout submission
+      const handleCheckout = () => {
+        if (!customerDetails.name || !customerDetails.address || !customerDetails.phone) {
+          alert("Please fill in all details to proceed with the order.");
+          return;
+        }
+
+        // Format order message
+        const orderItems = cart.map(item => `${item.name} - KSh ${item.price}`).join("\n");
+        const message = `New Order from Juja Organic Market\n\nCustomer: ${customerDetails.name}\nAddress: ${customerDetails.address}\nPhone: ${customerDetails.phone}\n\nItems:\n${orderItems}\n\nTotal: KSh ${totalPrice}`;
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/+254795132693?text=${encodedMessage}`;
+
+        // Open WhatsApp link
+        window.open(whatsappUrl, "_blank");
+
+        // Reset cart and form
+        setCart([]);
+        setCustomerDetails({ name: "", address: "", phone: "" });
+        setShowCheckout(false);
+        alert("Order sent successfully via WhatsApp!");
+      };
+
+      // Filter products by category
+      const filteredProducts = filter === "All" ? products : products.filter(product => product.category === filter);
+
+      return (
+        <div>
+          {/* Header */}
+          <header class="bg-green-600 text-white p-4">
+            <div class="container mx-auto flex justify-between items-center">
+              <h1 class="text-2xl font-bold">Juja Organic Market</h1>
+              <nav>
+                <a href="#home" class="mx-2 hover:underline">Home</a>
+                <a href="#products" class="mx-2 hover:underline">Products</a>
+                <a href="#about" class="mx-2 hover:underline">About</a>
+                <a href="#cart" class="mx-2 hover:underline">Cart ({cart.length})</a>
+              </nav>
+            </div>
+          </header>
+
+          {/* Hero Section */}
+          <section id="home" class="bg-green-100 py-16 text-center">
+            <div class="container mx-auto">
+              <h2 class="text-4xl font-bold mb-4">Fresh Organic Food from Juja</h2>
+              <p class="text-lg mb-6">Shop locally sourced, certified organic produce delivered to your door!</p>
+              <a href="#products" class="bg-green-600 text-white px-6 py-3 rounded-full hover:bg-green-700">Shop Now</a>
+            </div>
+          </section>
+
+          {/* Products Section */}
+          <section id="products" class="py-12">
+            <div class="container mx-auto">
+              <h3 class="text-3xl font-bold text-center mb-8">Our Products</h3>
+              <div class="flex justify-center mb-6">
+                <select
+                  class="p-2 border rounded"
+                  onChange={(e) => setFilter(e.target.value)}
+                >
+                  <option value="All">All Categories</option>
+                  <option value="Fruits">Fruits</option>
+                  <option value="Vegetables">Vegetables</option>
+                  <option value="Grains">Grains</option>
+                  <option value="Others">Others</option>
+                </select>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {filteredProducts.map(product => (
+                  <div key={product.id} class="bg-white p-4 rounded-lg shadow">
+                    <img src={product.image} alt={product.name} class="w-full h-40 object-cover rounded mb-4" />
+                    <h4 class="text-xl font-semibold">{product.name}</h4>
+                    <p class="text-gray-600">KSh {product.price}</p>
+                    <button
+                      class="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                      onClick={() => addToCart(product)}
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* About Section */}
+          <section id="about" class="bg-green-100 py-12">
+            <div class="container mx-auto text-center">
+              <h3 class="text-3xl font-bold mb-6">About Juja Organic Market</h3>
+              <p class="text-lg max-w-2xl mx-auto">
+                We are passionate about bringing fresh, organic produce to Juja. Partnered with the Kenya Institute of Organic Farming (KIOF), we work with local farmers to deliver sustainable, chemical-free fruits, vegetables, and more to your table.
+              </p>
+            </div>
+          </section>
+
+          {/* Cart Section */}
+          <section id="cart" class="py-12">
+            <div class="container mx-auto">
+              <h3 class="text-3xl font-bold text-center mb-8">Your Cart</h3>
+              {cart.length === 0 ? (
+                <p class="text-center">Your cart is empty.</p>
+              ) : (
+                <div>
+                  {cart.map((item, index) => (
+                    <div key={index} class="flex justify-between p-4 border-b">
+                      <span>{item.name}</span>
+                      <span>KSh {item.price}</span>
+                    </div>
+                  ))}
+                  <p class="text-xl font-semibold mt-4">
+                    Total: KSh {totalPrice}
+                  </p>
+                  <button
+                    class="mt-4 bg-green-600 text-white px-6 py-3 rounded-full hover:bg-green-700"
+                    onClick={() => setShowCheckout(true)}
+                  >
+                    Proceed to Checkout
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Checkout Modal */}
+          {showCheckout && (
+            <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <div class="bg-white p-6 rounded-lg max-w-md w-full">
+                <h3 class="text-2xl font-bold mb-4">Checkout</h3>
+                <div class="mb-4">
+                  <label class="block text-gray-700 mb-1">Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={customerDetails.name}
+                    onChange={handleInputChange}
+                    class="w-full p-2 border rounded"
+                    placeholder="Your name"
+                  />
+                </div>
+                <div class="mb-4">
+                  <label class="block text-gray-700 mb-1">Address</label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={customerDetails.address}
+                    onChange={handleInputChange}
+                    class="w-full p-2 border rounded"
+                    placeholder="Delivery address in Juja"
+                  />
+                </div>
+                <div class="mb-4">
+                  <label class="block text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={customerDetails.phone}
+                    onChange={handleInputChange}
+                    class="w-full p-2 border rounded"
+                    placeholder="Your phone number"
+                  />
+                </div>
+                <p class="text-xl font-semibold mb-4">Total: KSh {totalPrice}</p>
+                <div class="flex justify-between">
+                  <button
+                    class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                    onClick={() => setShowCheckout(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                    onClick={handleCheckout}
+                  >
+                    Place Order
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <footer class="bg-green-600 text-white py-6">
+            <div class="container mx-auto text-center">
+              <p>Contact us: <a href="mailto:support@jujaorganicmarket.com" class="underline">support@jujaorganicmarket.com</a></p>
+              <p>Follow us on WhatsApp: +254795132693</p>
+              <p>© 2025 Juja Organic Market. All rights reserved.</p>
+            </div>
+          </footer>
+
+          {/* Cookie Consent */}
+          <div class="fixed bottom-0 left-0 right-0 bg-gray-800 text-white p-4 text-center">
+            <p>We use cookies to improve your experience. By using our site, you agree to our cookie policy.</p>
+            <button class="bg-green-600 text-white px-4 py-2 rounded mt-2 hover:bg-green-700" onClick={(e) => e.target.parentElement.style.display = 'none'}>
+              Accept
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Render the App
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
